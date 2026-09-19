@@ -8,7 +8,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.analysis import load_and_analyse, top_burden_share
+from src.analysis import (DEFAULT_SCENARIO, GROUP_NAMES, load_and_analyse,
+                          rank_interventions, simulate_scenario, top_burden_share)
 
 
 ED_PATH = ROOT / "data" / "raw" / "eddc.csv"
@@ -19,28 +20,28 @@ COHORT_CONTENT = {
     "Occasional / lower burden": {
         "id": "occasional",
         "label": "Monitor",
-        "description": "Lower recurrence and lower same-year inpatient burden.",
+        "description": "Fewer than four ED visits and fewer hospital days over the year.",
         "color": "#8AA4B0",
         "pathwayPrompts": ["Standard ED pathway", "Monitor for escalation", "Routine discharge information"],
     },
     "Acute complex": {
         "id": "acute",
         "label": "Prepare early",
-        "description": "Fewer ED presentations, but substantial inpatient burden when care is required.",
+        "description": "Fewer than four ED visits, but among the highest 10% for hospital days over the year.",
         "color": "#F59E0B",
         "pathwayPrompts": ["Early multidisciplinary assessment", "Discharge-readiness planning", "Rehabilitation or hospital-at-home eligibility"],
     },
     "Frequent / lower burden": {
         "id": "frequent",
         "label": "Connect care",
-        "description": "Repeated ED contact without top-decile inpatient burden.",
+        "description": "Four or more ED visits, with fewer hospital days over the year. Stable describes this visit pattern, not a clinical assessment.",
         "color": "#38BDF8",
         "pathwayPrompts": ["Primary-care access review", "Rapid outpatient follow-up", "Potentially avoidable presentation review"],
     },
     "High-burden recurrent": {
         "id": "recurrent",
         "label": "Coordinate",
-        "description": "Repeated ED contact combined with top-decile same-year inpatient burden.",
+        "description": "Four or more ED visits and among the highest 10% for hospital days over the year.",
         "color": "#0F766E",
         "pathwayPrompts": ["Comprehensive geriatric assessment", "Coordinated discharge", "Medication review", "Community rapid response"],
     },
@@ -83,7 +84,7 @@ def main() -> None:
         cohorts.append(
             {
                 **content,
-                "name": name,
+                "name": GROUP_NAMES[name],
                 "patients": int(row["patients"]),
                 "patientShare": percent(row["patient_share"]),
                 "edPresentations": int(row["ed_presentations"]),
@@ -95,6 +96,9 @@ def main() -> None:
                 "medianAgeBand": int(people["age_band"].median()),
                 "medianPresentations": number(people["ed_presentations"].median()),
                 "potentiallyAvoidable": int(row["potentially_avoidable"]),
+                "avoidable_share": percent(row["avoidable_share"]),
+                "recommended_interventions": rank_interventions(row),
+                "default_simulation": simulate_scenario(row, **DEFAULT_SCENARIO),
             }
         )
 
@@ -105,6 +109,7 @@ def main() -> None:
         sampled = __import__("pandas").concat([sampled, curve.tail(1)])
 
     payload = {
+        "schemaVersion": 2,
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "population": "Adults aged 65+ with at least one 2022 ED presentation",
         "metrics": {
@@ -116,6 +121,11 @@ def main() -> None:
             "highBurdenThreshold": number(bundle.burden_threshold),
         },
         "cohorts": cohorts,
+        "risk_factors": bundle.risk_factors,
+        "model_metrics": bundle.model_metrics,
+        "cluster_validation": bundle.cluster_validation,
+        "scenario_assumptions": {**DEFAULT_SCENARIO, "n_draws": 2000,
+                                 "beta_concentration": 40, "days_relative_sd": 0.2},
         "frequency": band_rows(bundle.frequency, "frequency_band"),
         "age": band_rows(bundle.age, "age_group"),
         "concentration": [
@@ -124,7 +134,7 @@ def main() -> None:
         ],
     }
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    OUTPUT.write_text(json.dumps(payload, indent=2, allow_nan=False), encoding="utf-8")
     print(f"Prepared {OUTPUT.relative_to(ROOT)} for {payload['metrics']['patients']:,} patients.")
 
 
