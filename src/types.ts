@@ -41,7 +41,7 @@ export type BandSummary = {
 };
 
 export type Summary = {
-  schemaVersion: 2;
+  schemaVersion: 3;
   generatedAt: string;
   population: string;
   metrics: {
@@ -53,6 +53,7 @@ export type Summary = {
     highBurdenThreshold: number;
   };
   cohorts: Cohort[];
+  exploration: ExplorationCell[];
   frequency: BandSummary[];
   age: BandSummary[];
   concentration: { patientShare: number; bedDayShare: number }[];
@@ -80,4 +81,19 @@ export type Summary = {
     beta_concentration: number;
     days_relative_sd: number;
   };
+};
+
+export type ExplorationCell = {
+  total_bed_days: number;
+  median_bed_days_per_person: number | null;
+  mean_bed_days_per_person: number | null;
+  ed_presentations_per_person: number | null;
+  admissions_per_100_presentations: number | null;
+  ageGroup: string;
+  frequencyBand: string;
+  patients: number;
+  edPresentations: number;
+  edAdmissions: number;
+  inpatientBedDays: number;
+  potentiallyAvoidable: number;
 };

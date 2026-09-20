@@ -9,7 +9,7 @@ export function ConcentrationChart({ points }: { points: Summary["concentration"
   return <div aria-label="Cumulative share of hospital days by share of people">
     <AreaChart className="h-80" data={rows} index="people" categories={["Hospital days", "Evenly shared"]}
       colors={["teal", "slate"]} minValue={0} maxValue={100} valueFormatter={v => `${Math.round(v)}%`}
-      showAnimation={false} curveType="linear" yAxisWidth={55} xAxisLabel="People, from fewest to most hospital days" />
+      showAnimation={false} curveType="linear" yAxisWidth={55} tickGap={32} intervalType="preserveStartEnd" xAxisLabel="People, from fewest to most hospital days" />
     <p className="caption">The teal curve shows recorded hospital days. The grey line shows what equal use would look like.</p>
     <details><summary>Read the chart as numbers</summary><div className="table-scroll"><table><thead><tr><th>Share of people</th><th>Share of hospital days</th></tr></thead><tbody>{points.filter((_, i) => i % 20 === 0 || i === points.length - 1).map((p, i) => <tr key={i}><td>{(p.patientShare * 100).toFixed(1)}%</td><td>{(p.bedDayShare * 100).toFixed(1)}%</td></tr>)}</tbody></table></div></details>
   </div>;

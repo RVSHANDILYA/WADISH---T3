@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.analysis import (DEFAULT_SCENARIO, GROUP_NAMES, load_and_analyse,
+from src.analysis import (DEFAULT_SCENARIO, GROUP_NAMES, exploration_cells, load_and_analyse,
                           rank_interventions, simulate_scenario, top_burden_share)
 
 
@@ -102,6 +102,9 @@ def main() -> None:
             }
         )
 
+    # Keep the plain-language group order consistent across tabs, tables and charts.
+    group_order = [content["id"] for content in COHORT_CONTENT.values()]
+    cohorts.sort(key=lambda group: group_order.index(group["id"]))
     curve = bundle.burden_curve
     stride = max(1, len(curve) // 180)
     sampled = curve.iloc[::stride]
@@ -109,7 +112,7 @@ def main() -> None:
         sampled = __import__("pandas").concat([sampled, curve.tail(1)])
 
     payload = {
-        "schemaVersion": 2,
+        "schemaVersion": 3,
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "population": "Adults aged 65+ with at least one 2022 ED presentation",
         "metrics": {
@@ -121,6 +124,9 @@ def main() -> None:
             "highBurdenThreshold": number(bundle.burden_threshold),
         },
         "cohorts": cohorts,
+        # Totals plus exact within-cell person-year median/mean/rates; never
+        # derive a median from summed or site-wide summary figures.
+        "exploration": exploration_cells(bundle.patient),
         "risk_factors": bundle.risk_factors,
         "model_metrics": bundle.model_metrics,
         "cluster_validation": bundle.cluster_validation,

@@ -3,8 +3,14 @@ __pycache__/
 *.py[cod]
 .DS_Store
 node_modules/
+.env
+.env.*
+!.env.example
 dist/
 *.tsbuildinfo
+test-results/
+playwright-report/
+.pytest_cache/
 public/data/summary.json
 
 # Hackathon data is governed by the participation agreement and must never be committed.

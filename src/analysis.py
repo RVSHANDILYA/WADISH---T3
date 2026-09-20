@@ -368,3 +368,40 @@ def top_burden_share(patient: pd.DataFrame, fraction: float = 0.10) -> float:
     ordered = patient.nlargest(count, "inpatient_bed_days")
     total = patient["inpatient_bed_days"].sum()
     return float(ordered["inpatient_bed_days"].sum() / total) if total else 0.0
+
+
+def exploration_cells(patient: pd.DataFrame) -> list[dict]:
+    """Disjoint person-year cells for the interactive explorer, with no identifiers.
+
+    Use the same recorded age and frequency bands as the existing analysis.
+    Summing any selection counts each person once; zero-count combinations remain
+    present so the matrix is stable for smaller authorised extracts.
+    Medians and means use person-year totals within each exact cell, including
+    patients with zero hospital days. Empty cells have null rates, not zero rates.
+    """
+    grouped = patient.groupby(["age_group", "frequency_band"], observed=True).agg(
+        patients=("synth_person_ID", "size"),
+        edPresentations=("ed_presentations", "sum"),
+        edAdmissions=("ed_admissions", "sum"),
+        inpatientBedDays=("inpatient_bed_days", "sum"),
+        median_bed_days_per_person=("inpatient_bed_days", "median"),
+        mean_bed_days_per_person=("inpatient_bed_days", "mean"),
+        ed_presentations_per_person=("ed_presentations", "mean"),
+        potentiallyAvoidable=("potentially_avoidable_presentations", "sum"),
+    )
+    index = pd.MultiIndex.from_product([AGE_LABELS, FREQUENCY_LABELS],
+                                      names=["age_group", "frequency_band"])
+    grouped = grouped.reindex(index, fill_value=0)
+    return [
+        {"ageGroup": str(age), "frequencyBand": str(frequency),
+         "patients": int(row.patients), "edPresentations": int(row.edPresentations),
+         "edAdmissions": int(row.edAdmissions),
+         "inpatientBedDays": round(float(row.inpatientBedDays), 2),
+         "total_bed_days": float(row.inpatientBedDays),
+         "median_bed_days_per_person": float(row.median_bed_days_per_person) if row.patients else None,
+         "mean_bed_days_per_person": float(row.mean_bed_days_per_person) if row.patients else None,
+         "ed_presentations_per_person": float(row.ed_presentations_per_person) if row.patients else None,
+         "admissions_per_100_presentations": float(row.edAdmissions / row.edPresentations * 100) if row.edPresentations else None,
+         "potentiallyAvoidable": int(row.potentiallyAvoidable)}
+        for (age, frequency), row in grouped.iterrows()
+    ]

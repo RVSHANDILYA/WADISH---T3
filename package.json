@@ -7,14 +7,22 @@
     "prepare:data": "python scripts/build_summary.py",
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:ui": "playwright test",
+    "verify:data": "node scripts/validate-summary.mjs",
+    "dev:all": "concurrently \"vite\" \"node server/index.js\"",
+    "test:server": "node --test tests/server/planning.test.js"
   },
   "dependencies": {
     "@tremor/react": "3.18.7",
     "@vitejs/plugin-react": "4.7.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.1",
+    "express": "^5.2.1",
     "framer-motion": "12.43.0",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.47.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
@@ -28,6 +36,7 @@
     "@types/react": "18.3.28",
     "@types/react-dom": "18.3.7",
     "autoprefixer": "10.6.1",
+    "concurrently": "^9.2.4",
     "postcss": "8.5.28",
     "tailwindcss": "3.4.19",
     "typescript": "latest"
